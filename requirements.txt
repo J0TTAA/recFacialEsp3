@@ -3,6 +3,7 @@ facenet-pytorch
 scikit-learn
 numpy
 Flask
+flask-cors
 gunicorn
 python-dotenv
 Pillow

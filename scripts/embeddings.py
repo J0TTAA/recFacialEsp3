@@ -37,6 +37,8 @@ def setup_environment():
     
     return resnet, device
 
+# EN: scripts/embeddings.py
+
 def get_image_paths_and_labels(input_dir):
     """
     Recorre los subdirectorios 'me' y 'not_me' y crea una lista de
@@ -44,11 +46,17 @@ def get_image_paths_and_labels(input_dir):
     """
     image_paths = []
     labels = []
+    
+    # Lista de extensiones de imagen que aceptamos
+    extensions = ["*.jpg", "*.jpeg", "*.png", "*.JPG", "*.JPEG"]
 
     # 1. Categoría "YO" (Etiqueta = 1)
     me_dir = os.path.join(input_dir, "me")
     if os.path.isdir(me_dir):
-        me_paths = glob(os.path.join(me_dir, "*.jpg"))
+        me_paths = []
+        for ext in extensions:
+            me_paths.extend(glob(os.path.join(me_dir, ext)))
+            
         image_paths.extend(me_paths)
         labels.extend([1] * len(me_paths))
         logging.info(f"Encontradas {len(me_paths)} imágenes en 'me'")
@@ -58,7 +66,10 @@ def get_image_paths_and_labels(input_dir):
     # 2. Categoría "NO-YO" (Etiqueta = 0)
     not_me_dir = os.path.join(input_dir, "not_me")
     if os.path.isdir(not_me_dir):
-        not_me_paths = glob(os.path.join(not_me_dir, "*.jpg"))
+        not_me_paths = []
+        for ext in extensions:
+            not_me_paths.extend(glob(os.path.join(not_me_dir, ext)))
+
         image_paths.extend(not_me_paths)
         labels.extend([0] * len(not_me_paths))
         logging.info(f"Encontradas {len(not_me_paths)} imágenes en 'not_me'")
