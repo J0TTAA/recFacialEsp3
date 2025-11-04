@@ -3,7 +3,7 @@ import numpy as np
 import joblib
 import json
 import logging
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, roc_auc_score, classification_report
@@ -93,15 +93,25 @@ def train_classifier(X_train_scaled, y_train):
     #    los errores en la clase minoritaria (la clase "YO").
     logging.info("Entrenando el modelo LogisticRegression...")
     model = LogisticRegression(
-        max_iter=200, 
+        max_iter=2000, 
         class_weight='balanced', 
         random_state=RANDOM_SEED,
-        # Usamos 'liblinear' porque es bueno para datasets pequeños/medianos
-        solver='liblinear' 
+        solver='liblinear',
+        C=0.001,  # Regularización extremadamente fuerte para combatir sobreajuste severo
+        penalty='l2',
+        tol=1e-6  # Tolerancia muy estricta
     )
     
     model.fit(X_train_scaled, y_train)
     logging.info("Entrenamiento completado.")
+    
+    # Validación cruzada para detectar overfitting
+    cv_scores = cross_val_score(model, X_train_scaled, y_train, cv=5, scoring='accuracy')
+    logging.info(f"Validación cruzada (5-fold): {cv_scores.mean():.4f} (+/- {cv_scores.std() * 2:.4f})")
+    
+    if cv_scores.mean() > 0.99:
+        logging.warning("⚠️  ADVERTENCIA: Accuracy muy alta (>99%) puede indicar sobreajuste")
+    
     return model
 
 def evaluate_model(model, X_test_scaled, y_test):
@@ -168,26 +178,44 @@ def main():
     if X is None or y is None:
         return # Error ya logueado en load_data
 
-    # 1. Dividir los datos
-    # 'stratify=y' es MUY importante para datos desbalanceados.
-    # Asegura que la proporción de 1s y 0s sea la misma
-    # en el set de 'train' y 'test'.
-    X_train, X_test, y_train, y_test = train_test_split(
+    # 1. Dividir los datos en train/val/test (70/15/15)
+    # Primero dividir en train+val y test
+    X_temp, X_test, y_temp, y_test = train_test_split(
         X, y, 
-        test_size=TEST_SPLIT_SIZE, 
+        test_size=0.15,  # 15% para test final
         random_state=RANDOM_SEED, 
         stratify=y
     )
-    logging.info(f"Datos divididos: {len(y_train)} para entrenamiento, {len(y_test)} para validación.")
+    # Luego dividir train+val en train y val
+    X_train, X_val, y_train, y_val = train_test_split(
+        X_temp, y_temp,
+        test_size=0.176,  # 15% del total (15/85 ≈ 0.176)
+        random_state=RANDOM_SEED,
+        stratify=y_temp
+    )
+    # Ahora tenemos: 70% train, 15% val, 15% test
+    logging.info(f"Datos divididos: {len(y_train)} entrenamiento, {len(y_val)} validación, {len(y_test)} test.")
 
     # 2. Preprocesar (Escalar)
-    X_train_scaled, X_test_scaled, scaler = preprocess_data(X_train, X_test)
+    X_train_scaled, X_val_scaled, scaler = preprocess_data(X_train, X_val)
+    X_test_scaled = scaler.transform(X_test)  # Transformar test también
 
     # 3. Entrenar
     model = train_classifier(X_train_scaled, y_train)
 
-    # 4. Evaluar
+    # 4. Evaluar en validación primero
+    logging.info("Evaluando en conjunto de validación...")
+    metrics_val = evaluate_model(model, X_val_scaled, y_val)
+    
+    # 5. Evaluar en test final
+    logging.info("Evaluando en conjunto de test final...")
     metrics = evaluate_model(model, X_test_scaled, y_test)
+    
+    # Comparar métricas para detectar overfitting
+    val_accuracy = metrics_val.get('accuracy', 0)
+    test_accuracy = metrics.get('accuracy', 0)
+    if test_accuracy > 0.99 and val_accuracy > 0.99:
+        logging.warning("⚠️  ADVERTENCIA: Accuracy >99% en ambos sets puede indicar sobreajuste severo")
 
     # 5. Guardar
     save_artifacts(model, scaler, metrics)

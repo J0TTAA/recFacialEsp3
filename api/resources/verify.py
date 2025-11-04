@@ -16,6 +16,7 @@ from api.utils.model_loader import (
     get_preprocess
 )
 from api.utils.image_processor import verify_face
+from api.utils.json_logger import log_api_request
 
 # Cargar variables de entorno
 load_dotenv()
@@ -26,7 +27,8 @@ verify_bp = Blueprint('verify', __name__)
 
 # Constantes
 MODEL_VERSION = os.environ.get("MODEL_VERSION", "me-verifier-v1")
-VERIFY_THRESHOLD = float(os.environ.get("VERIFY_THRESHOLD", 0.75))
+# Umbral ajustado a 0.975 según evaluación (umbral óptimo es 0.9749)
+VERIFY_THRESHOLD = float(os.environ.get("VERIFY_THRESHOLD", 0.975))
 MAX_CONTENT_MB = int(os.environ.get("MAX_CONTENT_MB", 2))
 
 
@@ -93,6 +95,20 @@ def verify():
         
         # Si hay error, retornarlo
         if "error" in result:
+            end_time = time.perf_counter()
+            timing_ms = (end_time - start_time) * 1000
+            
+            # Logging JSON de error de validación
+            log_api_request(
+                logger=logger,
+                endpoint='/verify',
+                method='POST',
+                latency_ms=timing_ms,
+                file_size_bytes=len(image_bytes),
+                status_code=400,
+                error=result.get('error', 'Unknown error')
+            )
+            
             return jsonify(result), 400
         
         # Calcular tiempo de procesamiento
@@ -103,17 +119,59 @@ def verify():
         result["model_version"] = MODEL_VERSION
         result["timing_ms"] = round(timing_ms, 2)
         
-        logger.info(f"Petición /verify: OK. is_me={result['is_me']}, score={result['score']:.4f}, time={timing_ms:.2f}ms")
+        # Logging JSON estructurado (H7.5)
+        log_api_request(
+            logger=logger,
+            endpoint='/verify',
+            method='POST',
+            latency_ms=timing_ms,
+            file_size_bytes=len(image_bytes),
+            result={
+                'is_me': result['is_me'],
+                'score': result['score'],
+                'threshold': result['threshold'],
+                'model_version': MODEL_VERSION
+            },
+            status_code=200
+        )
         
         return jsonify(result), 200
             
     except FileNotFoundError as e:
+        end_time = time.perf_counter()
+        timing_ms = (end_time - start_time) * 1000
+        
+        # Logging JSON de error
+        log_api_request(
+            logger=logger,
+            endpoint='/verify',
+            method='POST',
+            latency_ms=timing_ms,
+            file_size_bytes=len(image_bytes) if 'image_bytes' in locals() else None,
+            status_code=503,
+            error=str(e)
+        )
+        
         logger.error(f"Error: {e}")
         return jsonify({
             "error": "Modelos no encontrados. Asegúrate de haber entrenado el modelo ejecutando 'train.py'."
         }), 503
         
     except Exception as e:
+        end_time = time.perf_counter()
+        timing_ms = (end_time - start_time) * 1000
+        
+        # Logging JSON de error
+        log_api_request(
+            logger=logger,
+            endpoint='/verify',
+            method='POST',
+            latency_ms=timing_ms,
+            file_size_bytes=len(image_bytes) if 'image_bytes' in locals() else None,
+            status_code=500,
+            error=str(e)
+        )
+        
         logger.error(f"Error inesperado en verificación: {e}", exc_info=True)
         return jsonify({
             "error": "Error interno del servidor al procesar la imagen"

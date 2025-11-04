@@ -1,0 +1,61 @@
+# Imágenes y datos grandes
+data/me/
+data/not_me/
+data/cropped/
+data/*.npy
+data/*.csv
+
+# Modelos entrenados (archivos grandes)
+models/*.joblib
+
+# Reportes generados (gráficos y JSON)
+reports/*.png
+reports/*.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Variables de entorno
+.env
+.env.local
+
+# Logs
+*.log
+
