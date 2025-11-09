@@ -14,6 +14,8 @@ Sistema de reconocimiento facial que identifica si una cara pertenece al usuario
 - [Uso](#uso)
 - [Ejemplos](#ejemplos)
 - [Troubleshooting](#troubleshooting)
+- [Evaluación y Reportes](#evaluación-y-reportes)
+- [Ética y Privacidad](#ética-y-privacidad)
 
 ## 📖 Descripción General
 
@@ -251,6 +253,14 @@ cat reports/metrics.json
 # Verificar que los modelos existen
 ls models/
 ```
+
+### Paso 5: Evaluación completa
+
+```bash
+python evaluate.py
+```
+
+Genera métricas actualizadas, curvas ROC/PR y `reports/evaluation_results.json`. Ejecuta este paso cada vez que reentrenes el modelo para mantener trazabilidad.
 
 ## 🌐 API REST
 
@@ -644,6 +654,26 @@ Los modelos se cargan **una sola vez al iniciar el servidor** (lazy loading):
 - Primera petición: Carga los modelos
 - Peticiones subsecuentes: Reutiliza modelos cargados en memoria
 - Esto mejora significativamente el tiempo de respuesta
+
+## 📈 Evaluación y Reportes
+
+- **Métricas de entrenamiento**: `reports/metrics.json` (split 70/15/15, guardado por `train.py`).
+- **Evaluación 80/20 reproducible**: `evaluate.py` genera `reports/evaluation_results.json` y gráficos (`confusion_matrix.png`, `roc_curve.png`, `pr_curve.png`).
+- **Informe técnico extendido**: `reports/INFORME_H10.md` resume dataset, pipeline, análisis de umbral, métricas, latencia y recomendaciones.
+- **Umbral operativo**: configurable mediante `VERIFY_THRESHOLD` (default `0.75`). `evaluate.py` calcula el umbral óptimo según F1-score (`threshold_analysis.optimal_threshold_f1`).
+- **Latencia de inferencia**: la regresión logística tarda ≈0.002 ms por muestra en CPU; los tiempos totales dependen de la detección y del embedding.
+
+Recomendaciones:
+- Re-ejecutar `evaluate.py` tras cualquier cambio en el dataset o en el modelo.
+- Documentar en `reports/` cualquier evaluación manual adicional (p. ej., pruebas con datos externos).
+
+## 🛡️ Ética y Privacidad
+
+- **Datos sensibles**: las imágenes crudas contienen información biométrica. No se versionan; almacénalas cifradas y elimina copias temporales tras procesar.
+- **Consentimiento**: asegúrate de contar con autorización explícita de cada persona en `data/not_me`.
+- **Uso responsable**: limita el acceso a la API y registra auditorías de uso para detectar abuso.
+- **Cumplimiento normativo**: considera GDPR/LGPD y leyes locales antes de desplegar en producción; ofrece mecanismos para revocar consentimiento y eliminar datos.
+- **Sesgos**: el dataset actual está desbalanceado (≈10 % positivos). Amplía la cobertura con más imágenes propias y casos negativos diversos para reducir sesgos.
 
 ## 🚀 Despliegue en Producción
 
