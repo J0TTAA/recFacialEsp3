@@ -1,0 +1,37 @@
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# Entornos virtuales
+venv/
+.venv/
+
+# Archivos y carpetas de configuración/IDE
+.git/
+.gitignore
+.gitattributes
+.idea/
+.vscode/
+
+# Cachés y temporales
+*.log
+*.tmp
+*.swp
+*.swo
+*.DS_Store
+Thumbs.db
+
+# Archivos de pruebas y datos locales
+test/
+reports/
+*.md
+
+# Archivos de entorno
+.env
+
+# Datos generados
+uploads/
+
+
