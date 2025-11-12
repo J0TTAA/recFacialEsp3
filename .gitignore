@@ -5,9 +5,6 @@ data/cropped/
 data/*.npy
 data/*.csv
 
-# Modelos entrenados (archivos grandes)
-models/*.joblib
-
 # Reportes generados (gráficos y JSON)
 reports/*.png
 reports/*.json
